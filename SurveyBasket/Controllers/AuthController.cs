@@ -2,9 +2,10 @@
 
 [Route("[controller]")]
 [ApiController]
-public class AuthController(IAuthService authService) : ControllerBase
+public class AuthController(IAuthService authService,IOptions<JwtOptions> options) : ControllerBase
 {
     private readonly IAuthService _authService = authService;
+    private readonly JwtOptions _options = options.Value;
 
     [HttpPost("")]
     public async Task<IActionResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
@@ -13,4 +14,5 @@ public class AuthController(IAuthService authService) : ControllerBase
 
         return authResult is null ? BadRequest("Invalid email/password"): Ok(authResult);
     }
+   
 }

@@ -1,13 +1,4 @@
-﻿using FluentValidation.AspNetCore;
-using MapsterMapper;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
-using SurveyBasket.Authentication;
-using System.Reflection;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
-
-namespace SurveyBasket;
+﻿namespace SurveyBasket;
 
 public static class DependencyInjection
 {
@@ -16,8 +7,12 @@ public static class DependencyInjection
     {
         services.AddControllers();
 
-        services.AddAuthConfig();
-
+        services.AddAuthConfig(configuration);
+        // services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        services.AddOptions<JwtOptions>()
+             .BindConfiguration(JwtOptions.SectionName)
+             .ValidateDataAnnotations()
+             .ValidateOnStart();
         var connectionString = configuration.GetConnectionString("DefaultConnection") ??
             throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
@@ -31,6 +26,8 @@ public static class DependencyInjection
 
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IPollService, PollService>();
+
+        
 
         return services;
     }
@@ -63,9 +60,11 @@ public static class DependencyInjection
         return services;
     }
 
-    private static IServiceCollection AddAuthConfig(this IServiceCollection services)
+    private static IServiceCollection AddAuthConfig(this IServiceCollection services,IConfiguration configuration)
     {
         services.AddSingleton<IJwtProvider, JwtProvider>();
+        var jwtSetting = configuration.GetSection("Jwt").Get<JwtOptions>();
+
 
         services.AddIdentity<ApplicationUser, IdentityRole>()
             .AddEntityFrameworkStores<ApplicationDbContext>();
@@ -84,12 +83,12 @@ public static class DependencyInjection
                 ValidateIssuer = true,
                 ValidateAudience = true,
                 ValidateLifetime = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("J7MfAb4WcAIMkkigVtIepIILOVJEjAcB")),
-                ValidIssuer = "SurveyBasketApp",
-                ValidAudience = "SurveyBasketApp users"
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes((jwtSetting?.Key)!)),
+                ValidIssuer = jwtSetting?.Issuer,
+                ValidAudience = jwtSetting?.Audience
             };
         });
-
+       
         return services;
     }
 }
